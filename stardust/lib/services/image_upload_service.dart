@@ -1,9 +1,25 @@
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+
+/// Wrapper class for XFile to handle both mobile and web
+class _XFileWrapper {
+  final XFile _xFile;
+  
+  _XFileWrapper(this._xFile);
+  
+  Future<List<int>> readAsBytes() async {
+    return await _xFile.readAsBytes();
+  }
+  
+  String get path => _xFile.path;
+  
+  String get name => _xFile.name;
+}
 
 /// Service for uploading images to Yandex Cloud Storage
 class ImageUploadService {
@@ -16,8 +32,11 @@ class ImageUploadService {
   final String _endpoint = 'https://storage.yandexcloud.net';
   final String _region = 'ru-central1';
   
+  // Proxy function URL for web
+  final String _proxyUrl = 'https://functions.yandexcloud.net/d4e3g69asu4ph8871vct';
+  
   /// Pick image from gallery
-  Future<File?> pickFromGallery() async {
+  Future<dynamic> pickFromGallery() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 1080,
@@ -26,13 +45,13 @@ class ImageUploadService {
     );
     
     if (image != null) {
-      return File(image.path);
+      return _XFileWrapper(image);
     }
     return null;
   }
   
   /// Pick image from camera
-  Future<File?> pickFromCamera() async {
+  Future<dynamic> pickFromCamera() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
       maxWidth: 1080,
@@ -41,37 +60,66 @@ class ImageUploadService {
     );
     
     if (image != null) {
-      return File(image.path);
+      return _XFileWrapper(image);
     }
     return null;
   }
   
   /// Pick multiple images
-  Future<List<File>> pickMultiple() async {
+  Future<List<dynamic>> pickMultiple() async {
     final List<XFile> images = await _picker.pickMultiImage(
       maxWidth: 1080,
       maxHeight: 1080,
       imageQuality: 85,
     );
     
-    return images.map((xFile) => File(xFile.path)).toList();
+    return images.map((xFile) => _XFileWrapper(xFile)).toList();
   }
   
   /// Upload image to Yandex Cloud Storage
   Future<String> uploadToYandex({
-    required File file,
+    required dynamic file,
     required String userId,
     String folder = 'avatars',
   }) async {
-    final fileName = '$folder/${userId}_${DateTime.now().millisecondsSinceEpoch}${path.extension(file.path)}';
-    final uri = Uri.parse('$_endpoint/$_bucket/$fileName');
+    final ext = path.extension(file.path).isNotEmpty 
+        ? path.extension(file.path) 
+        : '.jpg';
+    final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
+    final contentType = _getContentType(ext);
     
     final fileBytes = await file.readAsBytes();
+    
+    // Для веба - используем прокси функцию
+    if (kIsWeb) {
+      final encodedBytes = base64Encode(fileBytes);
+      final uri = Uri.parse('$_proxyUrl/?filename=$fileName&content_type=$contentType');
+      
+      final response = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: jsonEncode({'data': encodedBytes}),
+      );
+      
+      if (response.statusCode == 200) {
+        final result = jsonDecode(response.body);
+        return result['url'] ?? '$_endpoint/$_bucket/photos/$fileName';
+      } else {
+        throw Exception('Upload failed: ${response.statusCode} - ${response.body}');
+      }
+    }
+    
+    // Для мобильных - прямой запрос с подписью
+    final fullPath = '$folder/$fileName';
+    final uri = Uri.parse('$_endpoint/$_bucket/$fullPath');
+    
     final date = DateTime.now().toUtc();
     final dateStamp = '${date.year}${_pad(date.month)}${_pad(date.day)}';
     final amzDate = '${dateStamp}T${_pad(date.hour)}${_pad(date.minute)}${_pad(date.second)}Z';
     
-    final contentType = _getContentType(path.extension(file.path));
     final payloadHash = sha256.convert(fileBytes).toString();
     
     final headers = {
@@ -93,13 +141,13 @@ class ImageUploadService {
     
     headers['Authorization'] = 'AWS4-HMAC-SHA256 '
         'Credential=$_accessKey/$dateStamp/$_region/s3/aws4_request, '
-        'SignedHeaders=host;x-amz-content-sha256;x-amz-date, '
+        'SignedHeaders=content-type;content-length;host;x-amz-content-sha256;x-amz-date, '
         'Signature=$signature';
     
     final response = await http.put(uri, headers: headers, body: fileBytes);
     
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return '$_endpoint/$_bucket/$fileName';
+      return '$_endpoint/$_bucket/$fullPath';
     } else {
       throw Exception('Upload failed: ${response.statusCode} - ${response.body}');
     }
@@ -107,7 +155,7 @@ class ImageUploadService {
   
   /// Upload image (alias for uploadToYandex)
   Future<String> uploadToFirebase({
-    required File file,
+    required dynamic file,
     required String userId,
     String folder = 'avatars',
   }) async {
