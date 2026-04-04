@@ -11,6 +11,9 @@ const String _githubOwner = 'alag1n';
 const String _githubRepo = 'stardust-images';
 const String _githubToken = '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';
 
+// Yandex Cloud Function для загрузки на GitHub
+const String _githubUploadUrl = 'https://functions.yandexcloud.net/d4e7c6mrr9bjtglvfdd9';
+
 /// Wrapper class for XFile to handle both mobile and web
 class _XFileWrapper {
   final XFile _xFile;
@@ -81,7 +84,7 @@ class ImageUploadService {
     return images.map((xFile) => _XFileWrapper(xFile)).toList();
   }
   
-  /// Upload image to GitHub
+  /// Upload image to GitHub via Yandex Function
   Future<String> uploadToGitHub({
     required dynamic file,
     required String userId,
@@ -90,33 +93,27 @@ class ImageUploadService {
     final ext = path.extension(file.path).isNotEmpty 
         ? path.extension(file.path) 
         : '.jpg';
-    final fileName = '${folder}/${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
+    final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
     
     final fileBytes = await file.readAsBytes();
     final base64Content = base64Encode(fileBytes);
     
-    final uri = Uri.parse(
-      'https://api.github.com/repos/$_githubOwner/$_githubRepo/contents/$fileName'
-    );
+    // Используем Yandex функцию для обхода CORS
+    final uri = Uri.parse('$_githubUploadUrl/?filename=$fileName');
     
-    final response = await http.put(
+    final response = await http.post(
       uri,
       headers: {
-        'Authorization': 'token $_githubToken',
-        'Accept': 'application/vnd.github.v3+json',
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'message': 'Upload image $fileName',
-        'content': base64Content,
-      }),
+      body: jsonEncode({'data': base64Content}),
     );
     
-    if (response.statusCode == 201 || response.statusCode == 200) {
+    if (response.statusCode == 200) {
       final result = jsonDecode(response.body);
-      return result['content']['download_url'];
+      return result['url'];
     } else {
-      throw Exception('GitHub upload failed: ${response.statusCode} - ${response.body}');
+      throw Exception('Upload failed: ${response.statusCode} - ${response.body}');
     }
   }
   
