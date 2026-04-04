@@ -6,6 +6,11 @@ import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+// GitHub конфигурация для загрузки изображений
+const String _githubOwner = 'alag1n';
+const String _githubRepo = 'stardust-images';
+const String _githubToken = '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';
+
 /// Wrapper class for XFile to handle both mobile and web
 class _XFileWrapper {
   final XFile _xFile;
@@ -76,81 +81,53 @@ class ImageUploadService {
     return images.map((xFile) => _XFileWrapper(xFile)).toList();
   }
   
+  /// Upload image to GitHub
+  Future<String> uploadToGitHub({
+    required dynamic file,
+    required String userId,
+    String folder = 'photos',
+  }) async {
+    final ext = path.extension(file.path).isNotEmpty 
+        ? path.extension(file.path) 
+        : '.jpg';
+    final fileName = '${folder}/${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
+    
+    final fileBytes = await file.readAsBytes();
+    final base64Content = base64Encode(fileBytes);
+    
+    final uri = Uri.parse(
+      'https://api.github.com/repos/$_githubOwner/$_githubRepo/contents/$fileName'
+    );
+    
+    final response = await http.put(
+      uri,
+      headers: {
+        'Authorization': 'token $_githubToken',
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'message': 'Upload image $fileName',
+        'content': base64Content,
+      }),
+    );
+    
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final result = jsonDecode(response.body);
+      return result['content']['download_url'];
+    } else {
+      throw Exception('GitHub upload failed: ${response.statusCode} - ${response.body}');
+    }
+  }
+  
   /// Upload image to Yandex Cloud Storage
   Future<String> uploadToYandex({
     required dynamic file,
     required String userId,
     String folder = 'avatars',
   }) async {
-    final ext = path.extension(file.path).isNotEmpty 
-        ? path.extension(file.path) 
-        : '.jpg';
-    final fileName = '${userId}_${DateTime.now().millisecondsSinceEpoch}$ext';
-    final contentType = _getContentType(ext);
-    
-    final fileBytes = await file.readAsBytes();
-    
-    // Для веба - используем прокси функцию
-    if (kIsWeb) {
-      final encodedBytes = base64Encode(fileBytes);
-      final uri = Uri.parse('$_proxyUrl/?filename=$fileName&content_type=$contentType');
-      
-      final response = await http.post(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: jsonEncode({'data': encodedBytes}),
-      );
-      
-      if (response.statusCode == 200) {
-        final result = jsonDecode(response.body);
-        return result['url'] ?? '$_endpoint/$_bucket/photos/$fileName';
-      } else {
-        throw Exception('Upload failed: ${response.statusCode} - ${response.body}');
-      }
-    }
-    
-    // Для мобильных - прямой запрос с подписью
-    final fullPath = '$folder/$fileName';
-    final uri = Uri.parse('$_endpoint/$_bucket/$fullPath');
-    
-    final date = DateTime.now().toUtc();
-    final dateStamp = '${date.year}${_pad(date.month)}${_pad(date.day)}';
-    final amzDate = '${dateStamp}T${_pad(date.hour)}${_pad(date.minute)}${_pad(date.second)}Z';
-    
-    final payloadHash = sha256.convert(fileBytes).toString();
-    
-    final headers = {
-      'Host': uri.host,
-      'x-amz-date': amzDate,
-      'x-amz-content-sha256': payloadHash,
-      'Content-Type': contentType,
-      'Content-Length': fileBytes.length.toString(),
-    };
-    
-    final signature = _generateSignature(
-      method: 'PUT',
-      uri: uri,
-      dateStamp: dateStamp,
-      amzDate: amzDate,
-      payloadHash: payloadHash,
-      headers: headers,
-    );
-    
-    headers['Authorization'] = 'AWS4-HMAC-SHA256 '
-        'Credential=$_accessKey/$dateStamp/$_region/s3/aws4_request, '
-        'SignedHeaders=content-type;content-length;host;x-amz-content-sha256;x-amz-date, '
-        'Signature=$signature';
-    
-    final response = await http.put(uri, headers: headers, body: fileBytes);
-    
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return '$_endpoint/$_bucket/$fullPath';
-    } else {
-      throw Exception('Upload failed: ${response.statusCode} - ${response.body}');
-    }
+    // Используем GitHub для загрузки (работает везде)
+    return uploadToGitHub(file: file, userId: userId, folder: folder);
   }
   
   /// Upload image (alias for uploadToYandex)
