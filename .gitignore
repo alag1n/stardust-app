@@ -1,1 +1,10 @@
-.aider*
+# Next.js
+.next/
+node_modules/
+
+# Firebase
+*.log
+firebase-debug.log
+
+# TypeScript
+*.tsbuildinfo
