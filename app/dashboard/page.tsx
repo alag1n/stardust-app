@@ -2,6 +2,9 @@ import React, { useEffect } from 'react';
 import { PetDisplay } from '../components/PetDisplay';
 import { getPet, updatePetStats } from '../lib/firebase/pets';
 import { decayStats } from '../lib/petLogic';
+import { getUserTasks } from '../lib/firebase/tasks';
+import { Shop } from '../components/Shop';
+import { Inventory } from '../components/Inventory';
 
 interface DashboardPageProps {
   params: { petId: string };
@@ -9,6 +12,9 @@ interface DashboardPageProps {
 
 const DashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
   const [pet, setPet] = React.useState<Pet | null>(null);
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [userCoins, setUserCoins] = React.useState<number>(0);
+  const [userEnergy, setUserEnergy] = React.useState<number>(0);
 
   useEffect(() => {
     const fetchPet = async () => {
@@ -20,7 +26,17 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
       }
     };
 
+    const fetchTasks = async () => {
+      try {
+        const fetchedTasks = await getUserTasks('user_id'); // Замените 'user_id' на реальный ID пользователя
+        setTasks(fetchedTasks);
+      } catch (error) {
+        console.error('Ошибка при получении заданий:', error);
+      }
+    };
+
     fetchPet();
+    fetchTasks();
 
     const interval = setInterval(async () => {
       if (pet) {
@@ -33,9 +49,24 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
     return () => clearInterval(interval);
   }, [params.petId, pet]);
 
-  if (!pet) {
-    return <div>Загрузка...</div>;
-  }
+  useEffect(() => {
+    // Обновление баланса после выполнения задания
+    const fetchUserBalance = async () => {
+      try {
+        const userRef = doc(db, 'users', 'user_id'); // Замените 'user_id' на реальный ID пользователя
+        const userSnapshot = await getDoc(userRef);
+        if (userSnapshot.exists()) {
+          const user = userSnapshot.data() as User;
+          setUserCoins(user.coins);
+          setUserEnergy(user.energy);
+        }
+      } catch (error) {
+        console.error('Ошибка при получении баланса:', error);
+      }
+    };
+
+    fetchUserBalance();
+  }, []);
 
   return (
     <div>
@@ -45,6 +76,23 @@ const DashboardPage: React.FC<DashboardPageProps> = ({ params }) => {
       <button onClick={() => {
         updatePetStats(params.petId, { hunger: pet.hunger + 20 });
       }}>Покормить</button>
+      <div className="mt-4">
+        <h2>Баланс</h2>
+        <p>Монеты: {userCoins}</p>
+        <p>Энергия: {userEnergy}</p>
+      </div>
+      <div className="mt-4">
+        <h2>Задания</h2>
+        <TaskList tasks={tasks} />
+      </div>
+      <div className="mt-4">
+        <h2>Магазин</h2>
+        <Shop petId={params.petId} />
+      </div>
+      <div className="mt-4">
+        <h2>Инвентарь</h2>
+        <Inventory petId={params.petId} />
+      </div>
     </div>
   );
 };
