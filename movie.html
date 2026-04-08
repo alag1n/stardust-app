@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка... — Buzz-Net</title>
+    <link rel="icon" type="image/jpeg" href="BuzzNet.jpg">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .movie-page {
+            min-height: 100vh;
+            padding-top: 80px;
+            padding-bottom: 2rem;
+        }
+        
+        .movie-hero {
+            position: relative;
+            min-height: 60vh;
+            display: flex;
+            align-items: flex-end;
+            padding: 2rem;
+            overflow: hidden;
+        }
+        
+        .movie-backdrop {
+            position: absolute;
+            inset: 0;
+            background-size: cover;
+            background-position: center top;
+            filter: blur(20px);
+            opacity: 0.3;
+            transform: scale(1.1);
+        }
+        
+        .movie-hero-content {
+            position: relative;
+            display: flex;
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .movie-poster-large {
+            width: 300px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            flex-shrink: 0;
+        }
+        
+        .movie-poster-large img {
+            width: 100%;
+            border-radius: 16px;
+        }
+        
+        .movie-info-main {
+            flex: 1;
+            padding-bottom: 1rem;
+        }
+        
+        .movie-title-main {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            line-height: 1.1;
+        }
+        
+        .movie-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+        
+        .movie-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .movie-rating-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, #ffd700, #ff8c00);
+            color: #000;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+        }
+        
+        .movie-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .genre-tag {
+            background: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .movie-overview {
+            color: var(--text-secondary);
+            line-height: 1.7;
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+        
+        .movie-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .btn-play-large {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .movie-details {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        
+        .section-title-small {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .cast-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .cast-member {
+            text-align: center;
+        }
+        
+        .cast-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 0.5rem;
+            border: 2px solid var(--primary);
+        }
+        
+        .cast-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .cast-character {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .loading-movie {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            gap: 1rem;
+        }
+        
+        .back-home {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+            background: rgba(0,0,0,0.5);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            z-index: 100;
+            transition: background 0.3s;
+        }
+        
+        .back-home:hover {
+            background: rgba(0,0,0,0.8);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+    </div>
+
+    <a href="index.html" class="back-home">
+        <i class="fas fa-arrow-left"></i>
+        На главную
+    </a>
+
+    <div class="movie-page" id="movie-page">
+        <div class="loading-movie" id="loading">
+            <div class="spinner"></div>
+            <p>Загрузка информации о фильме...</p>
+        </div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div class="player-modal" id="player-modal">
+        <div class="player-container">
+            <button class="close-player" onclick="closePlayerModal()"><i class="fas fa-times"></i></button>
+            
+            <div class="video-wrapper">
+                <video id="video-player" controls>
+                    Ваш браузер не поддерживает HTML5 видео
+                </video>
+            </div>
+            
+            <div class="player-info">
+                <div class="player-title" id="player-title">Загрузка...</div>
+                <div class="player-stats" id="player-stats">
+                    <span class="stat"><i class="fas fa-download"></i> <span id="download-speed">0 KB/s</span></span>
+                    <span class="stat"><i class="fas fa-upload"></i> <span id="upload-speed">0 KB/s</span></span>
+                    <span class="stat"><i class="fas fa-users"></i> <span id="peers-count">0</span> пиров</span>
+                    <span class="stat"><i class="fas fa-percentage"></i> <span id="progress">0%</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_CONFIG = {
+            tmdb: {
+                baseUrl: 'https://functions.yandexcloud.net/d4e9822goqm9pg2s05kv?path=',
+                timeout: 15000
+            },
+            imageProxy: 'https://functions.yandexcloud.net/d4ejasooghuovesvrqv8'
+        };
+
+        // Get movie ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const movieId = urlParams.get('id');
+        const movieType = urlParams.get('type') || 'movie';
+
+        let client = null;
+        let currentTorrent = null;
+        let currentMovie = null;
+
+        function getTmdbImageUrl(path, size = 'w500') {
+            if (!path) return 'https://via.placeholder.com/500x750/1a1a2e/667eea?text=No+Image';
+            if (path.startsWith('http')) return path;
+            return `${API_CONFIG.imageProxy}?path=${path}&size=${size}`;
+        }
+
+        async function fetchFromTMDB(endpoint, params = {}) {
+            let path = endpoint;
+            const queryParams = new URLSearchParams();
+            
+            Object.entries(params).forEach(([key, value]) => {
+                queryParams.append(key, value);
+            });
+            
+            if (queryParams.toString()) {
+                path += '?' + queryParams.toString();
+            }
+            
+            const url = API_CONFIG.tmdb.baseUrl + encodeURIComponent(path);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.tmdb.timeout);
+            
+            try {
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error(`TMDB Error: ${response.status}`);
+                
+                return await response.json();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                console.error('TMDB fetch error:', error);
+                throw error;
+            }
+        }
+
+        async function loadMovieDetails() {
+            if (!movieId) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                const data = await fetchFromTMDB(`/${movieType}/${movieId}`);
+                currentMovie = data;
+                
+                document.title = `${data.title || data.name} — Buzz-Net`;
+                
+                renderMoviePage(data);
+            } catch (error) {
+                console.error('Error loading movie:', error);
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: #f093fb;">Не удалось загрузить информацию о фильме</p>
+                    <a href="index.html" class="btn-gradient">На главную</a>
+                `;
+            }
+        }
+
+        function renderMoviePage(movie) {
+            const page = document.getElementById('movie-page');
+            const title = movie.title || movie.name;
+            const year = (movie.release_date || movie.first_air_date || '').substring(0, 4);
+            const overview = movie.overview || 'Описание недоступно.';
+            const rating = movie.vote_average ? movie.vote_average.toFixed(1) : 'N/A';
+            
+            const posterUrl = movie.poster_path ? getTmdbImageUrl(movie.poster_path, 'w500') : '';
+            const backdropUrl = movie.backdrop_path ? getTmdbImageUrl(movie.backdrop_path, 'original') : '';
+            
+            const genres = movie.genres?.map(g => g.name).join(', ') || 'Фильм';
+            
+            page.innerHTML = `
+                <div class="movie-hero">
+                    <div class="movie-backdrop" style="background-image: url('${backdropUrl}')"></div>
+                    <div class="movie-hero-content">
+                        <div class="movie-poster-large">
+                            <img src="${posterUrl}" alt="${title}" onerror="this.src='https://via.placeholder.com/300x450/1a1a2e/667eea?text=No+Image'">
+                        </div>
+                        <div class="movie-info-main">
+                            <h1 class="movie-title-main">${title}</h1>
+                            <div class="movie-meta">
+                                <span><i class="fas fa-calendar"></i> ${year}</span>
+                                <span><i class="fas fa-clock"></i> ${movie.runtime || movie.episode_run_time?.[0] || 'N/A'} мин</span>
+                                <span class="movie-rating-badge">
+                                    <i class="fas fa-star"></i> ${rating}
+                                </span>
+                            </div>
+                            <div class="movie-genres">
+                                ${movie.genres?.map(g => `<span class="genre-tag">${g.name}</span>`).join('') || ''}
+                            </div>
+                            <p class="movie-overview">${overview}</p>
+                            <div class="movie-actions">
+                                <button class="btn-play-large btn-gradient" onclick="playMovie()">
+                                    <i class="fas fa-play"></i> Смотреть
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="movie-details">
+                    <h3 class="section-title-small"><i class="fas fa-info-circle"></i> О фильме</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                            <div style="color: var(--text-muted); font-size: 0.85rem;">Статус</div>
+                            <div>${movie.status || 'N/A'}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                            <div style="color: var(--text-muted); font-size: 0.85rem;">Оригинальное название</div>
+                            <div>${movie.original_title || movie.original_name || title}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                            <div style="color: var(--text-muted); font-size: 0.85rem;">Бюджет</div>
+                            <div>${movie.budget ? '$' + movie.budget.toLocaleString() : 'N/A'}</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">
+                            <div style="color: var(--text-muted); font-size: 0.85rem;">Сборы</div>
+                            <div>${movie.revenue ? '$' + movie.revenue.toLocaleString() : 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function playMovie() {
+            if (!currentMovie) return;
+            
+            const title = currentMovie.title || currentMovie.name;
+            const year = (currentMovie.release_date || currentMovie.first_air_date || '').substring(0, 4);
+            
+            showManualSearchModal(title, year, movieType);
+        }
+
+        function showManualSearchModal(title, year, type) {
+            const existing = document.querySelector('.manual-search-modal');
+            if (existing) existing.remove();
+            
+            const searchTitle = year ? `${title} ${year}` : title;
+            
+            const modal = document.createElement('div');
+            modal.className = 'manual-search-modal';
+            modal.innerHTML = `
+                <div class="manual-search-content">
+                    <h3>Воспроизведение</h3>
+                    <p>Для "${title}"</p>
+                    <p style="font-size: 0.9em; color: #999; margin-bottom: 1rem;">
+                        Найдите торрент вручную и вставьте magnet-ссылку:
+                    </p>
+                    <div style="margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                        <a href="https://yts.mx/browse-movies/${encodeURIComponent(searchTitle)}" target="_blank" 
+                           class="btn-gradient" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none;">YTS</a>
+                        <a href="https://1337x.to/search/${encodeURIComponent(searchTitle)}/1/" target="_blank"
+                           class="btn-gradient" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none;">1337x</a>
+                        <a href="https://rutor.info/search/${encodeURIComponent(searchTitle)}" target="_blank"
+                           class="btn-gradient" style="padding: 0.5rem 1rem; font-size: 0.85rem; text-decoration: none;">Rutor</a>
+                    </div>
+                    <input type="text" id="magnet-input" placeholder="magnet:?xt=..." 
+                           style="width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid #333; 
+                                  background: #1a1a2e; color: white; margin-bottom: 1rem; font-family: monospace; font-size: 0.85rem;">
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="play-magnet-btn" class="btn-gradient" style="flex: 1;">
+                            <i class="fas fa-play"></i> Воспроизвести
+                        </button>
+                        <button id="cancel-magnet-btn" class="btn-gradient" style="flex: 1; background: linear-gradient(135deg, #f093fb, #f5576c);">
+                            <i class="fas fa-times"></i> Отмена
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center;
+                z-index: 10000; padding: 1rem;
+            `;
+            
+            const content = modal.querySelector('.manual-search-content');
+            content.style.cssText = `
+                background: linear-gradient(135deg, #1a1a2e, #16213e);
+                padding: 2rem; border-radius: 16px; max-width: 500px; width: 100%;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            `;
+            
+            document.body.appendChild(modal);
+            
+            modal.querySelector('#play-magnet-btn').addEventListener('click', () => {
+                const magnetInput = modal.querySelector('#magnet-input');
+                const magnet = magnetInput.value.trim();
+                
+                if (magnet && (magnet.startsWith('magnet:') || magnet.includes('magnet:'))) {
+                    modal.remove();
+                    playTorrent({
+                        magnet: magnet,
+                        title: title,
+                        source: 'Manual'
+                    }, title);
+                } else {
+                    alert('Введите корректную magnet-ссылку');
+                }
+            });
+            
+            modal.querySelector('#cancel-magnet-btn').addEventListener('click', () => {
+                modal.remove();
+            });
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        }
+
+        // WebTorrent
+        function initWebTorrent() {
+            if (typeof WebTorrent === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js';
+                script.onload = () => {
+                    client = new WebTorrent();
+                };
+                document.head.appendChild(script);
+            } else {
+                client = new WebTorrent();
+            }
+        }
+
+        function playTorrent(torrent, title) {
+            if (!client) {
+                alert('WebTorrent загружается, попробуйте ещё раз...');
+                return;
+            }
+            
+            let magnetUri = torrent.magnet;
+            if (!magnetUri.includes('tr=')) {
+                magnetUri += '&tr=udp://tracker.opentrackr.org:1337&tr=udp://open.stealth.si:80/announce';
+            }
+            
+            if (currentTorrent) {
+                currentTorrent.destroy();
+            }
+            
+            client.add(magnetUri, (addedTorrent) => {
+                currentTorrent = addedTorrent;
+                
+                const videoFile = addedTorrent.files.find(file => {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    return ['mp4', 'webm', 'mkv', 'avi', 'mov'].includes(ext);
+                });
+                
+                if (videoFile) {
+                    openPlayer(videoFile, addedTorrent, title);
+                } else {
+                    alert('Видеофайл не найден в торренте');
+                }
+            });
+        }
+
+        function openPlayer(file, torrent, title) {
+            const playerModal = document.getElementById('player-modal');
+            const videoPlayer = document.getElementById('video-player');
+            const playerTitle = document.getElementById('player-title');
+            
+            if (playerTitle) playerTitle.textContent = title;
+            
+            file.renderTo(videoPlayer, (err) => {
+                if (err) {
+                    alert('Ошибка воспроизведения');
+                    return;
+                }
+                
+                playerModal.classList.add('active');
+                videoPlayer.play().catch(() => {});
+            });
+            
+            setInterval(() => {
+                if (playerModal.classList.contains('active')) {
+                    updatePlayerStats(torrent);
+                }
+            }, 1000);
+        }
+
+        function updatePlayerStats(torrent) {
+            const downloadSpeed = document.getElementById('download-speed');
+            const uploadSpeed = document.getElementById('upload-speed');
+            const peersCount = document.getElementById('peers-count');
+            const progress = document.getElementById('progress');
+            
+            if (downloadSpeed) downloadSpeed.textContent = formatSpeed(torrent.downloadSpeed);
+            if (uploadSpeed) uploadSpeed.textContent = formatSpeed(torrent.uploadSpeed);
+            if (peersCount) peersCount.textContent = torrent.numPeers;
+            if (progress) progress.textContent = Math.round(torrent.progress * 100) + '%';
+        }
+
+        function formatSpeed(bytesPerSec) {
+            if (bytesPerSec < 1024) return bytesPerSec + ' B/s';
+            if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+            return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+        }
+
+        function closePlayerModal() {
+            const playerModal = document.getElementById('player-modal');
+            const videoPlayer = document.getElementById('video-player');
+            
+            if (playerModal) playerModal.classList.remove('active');
+            if (videoPlayer) {
+                videoPlayer.pause();
+                videoPlayer.src = '';
+            }
+            
+            if (currentTorrent) {
+                currentTorrent.destroy();
+                currentTorrent = null;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initWebTorrent();
+            loadMovieDetails();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePlayerModal();
+            }
+        });
+    </script>
+</body>
+</html>
